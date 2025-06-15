@@ -1,42 +1,53 @@
-use std::{collections::HashMap, sync::Arc};
+use crate::utils::logger::Logger;
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use tokio::sync::RwLock;
-
-use crate::player::PlayerInfo;
+use tokio::{sync::RwLock, time};
+use crate::logger;
+use crate::r#match::match_info::MatchInfo;
+use crate::player::Player;
 
 #[derive(Default)]
-pub struct MatchMaking {
-    player_pool: Arc<RwLock<HashMap<String, PlayerInfo>>>,
+pub struct MatchMakingInstance {
+    matches: Arc<RwLock<HashMap<String, MatchInfo>>>,
+    player_pool: Arc<RwLock<HashMap<String, Arc<Player>>>>,
 }
 
-impl MatchMaking {
+impl MatchMakingInstance {
+    pub async fn queue_player(&self, player: Player) -> String {
+        logger!(INFO, "`{}` has been queued up.", &player.player_id);
+        let mut pool = self.player_pool.write().await;
+        pool.insert(player.player_id.clone(), Arc::new(player));
+        todo!("Generate token string for cancellation")
+    }
+
     pub async fn queue(&mut self) {
         loop {
-            let players = self.match_players();
+            if let Some(players) = self.match_players().await {
+                let mut pool_guard = self.player_pool.write().await;
+            }
+            time::interval(Duration::from_secs(1)).tick().await;
         }
     }
 
-    pub async fn add_player(&mut self, player_info: PlayerInfo) {
+    pub async fn match_players(&self) -> Option<Vec<Arc<Player>>> {
+        let mut matched_players: Vec<Arc<Player>> = Vec::new();
         let mut pool_guard = self.player_pool.write().await;
-        let player_id = player_info.player_id.to_owned();
-        pool_guard.insert(player_id, player_info);
-    }
 
-    pub async fn match_players(&self) -> Vec<String> {
-        let mut matched_players: Vec<String> = Vec::new();
-        let pool_guard = self.player_pool.read().await;
-
-        if pool_guard.len() % 2 == 0 {
-            // No logic for now, just match whoever is there.
-            // Undiscard the value when needed.
-            for (k, _) in pool_guard.iter() {
-                matched_players.push(k.to_string());
+        if pool_guard.len() >= 2 {
+            for (_, player) in pool_guard.iter() {
                 if matched_players.len() == 2 {
                     break;
+                } else {
+                    matched_players.push(player.clone());
                 }
             }
-        }
 
-        return matched_players;
+            for player in matched_players.iter() {
+                pool_guard.remove(player.player_id.as_str());
+            }
+            
+            return Some(matched_players);
+        }
+        None
     }
 }

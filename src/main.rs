@@ -1,10 +1,13 @@
 use std::{io::Error, sync::Arc};
 
-use network::network::ServerInstance;
+use network::server::ServerInstance;
 
 mod making;
 mod network;
 mod player;
+mod r#match;
+mod checksum;
+mod utils;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {

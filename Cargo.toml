@@ -5,5 +5,8 @@ edition = "2024"
 
 [dependencies]
 reqwest = "0.12.15"
-serde = "1.0.219"
+serde_cbor = "0.11.2"
+serde = {version = "1.0.219", features = ["derive"]}
 tokio = { version = "1.44.2", features = ["full"] }
+thiserror = "2.0.12"
+chrono = "0.4.41"
